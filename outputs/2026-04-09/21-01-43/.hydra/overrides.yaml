@@ -1,0 +1,6 @@
+- data.data_root=/tmp/circuitnet_work/instance_placement/
+- data.label_root=/home/jovyan/shared/ctrl-nxp/CircuitNet-N28/training_set/congestion/label/
+- data.batch_size=4
+- model.batch_size=4
+- trainer.precision=16-mixed
+- trainer.accumulate_grad_batches=2
