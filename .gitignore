@@ -28,3 +28,8 @@ __pycache__/
 # SYSTEM FILES
 # =========================
 .DS_Store
+
+# Checkpoints
+CircuitFormer/ckpts/
+*.ckpt
+*.pth
