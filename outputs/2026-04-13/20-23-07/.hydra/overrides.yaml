@@ -1,0 +1,2 @@
+- data.data_root=/home/jovyan/shared/ctrl-nxp/CircuitNet-N28/micron_instance_placement/instance_placement/
+- data.label_root=/home/jovyan/shared/ctrl-nxp/CircuitNet-N28/training_set/congestion/label/
