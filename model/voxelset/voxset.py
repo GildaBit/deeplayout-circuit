@@ -21,11 +21,10 @@ class MLP(nn.Module):
         return x
 
 class PointPillarScatter(nn.Module):
-    def __init__(self):
+    def __init__(self, nx=128, ny=128):
         super().__init__()
-
         self.num_bev_features = 64
-        self.nx, self.ny = 256, 256
+        self.nx, self.ny = nx, ny
 
     def forward(self, pillar_features, coords):
         batch_spatial_features = []
@@ -159,7 +158,7 @@ class PositionalEncodingFourier(nn.Module):
         return pos
     
 class VoxSeT(nn.Module):
-    def __init__(self):
+    def __init__(self, grid_size=128):
         super().__init__()
 
         self.num_latents = [8, 8, 8, 8]
@@ -177,7 +176,10 @@ class VoxSeT(nn.Module):
         self.mlp_vsa_layer_1 = MLP_VSA_Layer(self.input_dim * 2, self.num_latents[1])
         self.mlp_vsa_layer_2 = MLP_VSA_Layer(self.input_dim * 4, self.num_latents[2])
         self.mlp_vsa_layer_3 = MLP_VSA_Layer(self.input_dim * 8, self.num_latents[3])
-        self.PointPillarScatter = PointPillarScatter()
+        self.grid_size = [grid_size, grid_size]
+        self.PointPillarScatter = PointPillarScatter(nx=grid_size, ny=grid_size)
+        
+        a, b = self.grid_size
 
 
         self.post_mlp = nn.Sequential(
@@ -201,8 +203,6 @@ class VoxSeT(nn.Module):
         self.register_buffer('voxel_size_04x', torch.FloatTensor([4, 4]))
         self.register_buffer('voxel_size_08x', torch.FloatTensor([8, 8]))
 
-        self.grid_size = [256, 256]
-        a, b = self.grid_size
         self.grid_size_02x = [a // 2, b // 2]
         self.grid_size_04x = [a // 4, b // 4]
         self.grid_size_08x = [a // 8, b // 8]

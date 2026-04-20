@@ -78,7 +78,7 @@ pip install -r requirements.txt
 
 ```bash
 # IMPORTANT NOTE INSTALL DIFF VERSION OF TORCH SCATTER IF GPU ACCESS
-pip install torch_scatter -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
+pip install torch_scatter -f https://data.pyg.org/whl/torch-2.4.0+cu121.html --force-reinstall
 pip install spconv
 pip install --upgrade wandb
 pip install --upgrade typing_extensions

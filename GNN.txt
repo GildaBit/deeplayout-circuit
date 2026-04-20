@@ -1,0 +1,167 @@
+🧠 1. Base Implementation of the GNN Algorithm
+🔹 Data Pipeline
+Parsed circuit placement + netlist data into model inputs
+Constructed heterogeneous graphs with:
+cell nodes
+net nodes
+cell–net edges
+cell–cell edges
+Attached node features:
+spatial coordinates (cx, cy)
+bounding box, width, height, area
+net features (degree, span)
+🔹 Graph Construction Layer
+Converts raw DEF + netlist into a graph representation
+Preserves:
+geometric information (placement)
+topological information (connectivity)
+
+Outputs:
+
+cell_feat, net_feat, edge indices
+🔹 Masking Module
+Partitions layout into spatial regions
+Masks subsets of cells by removing coordinate features
+Keeps structural features (size, area)
+Used for self-supervised pretraining and regularization
+🔹 GNN Encoder
+Heterogeneous message passing over:
+cells ↔ nets
+optional cell ↔ cell edges
+Updates:
+cell embeddings
+net embeddings
+Captures:
+local neighborhoods
+long-range connectivity via nets
+🔹 Spatial / Geometry Branch
+Encodes layout structure independently
+Uses VoxSeT-style spatial encoder
+Captures:
+placement density
+spatial distribution of cells
+🔹 Fusion Layer
+Combines:
+graph (topology)
+spatial (geometry) features
+Produces joint representation for prediction
+🔹 Decoder + Task Head
+CNN decoder (UNet++)
+Predicts:
+congestion / routability map
+Optional auxiliary head:
+coordinate reconstruction for masked cells
+🔹 Training Pipeline
+Forward pass → loss → optimizer → validation
+Supports:
+masking ratio
+architecture variants
+dataset size scaling
+🔹 Slide-ready version
+Built graph from placement + netlist
+Used heterogeneous GNN for topology
+Added spatial encoder for geometry
+Fused both for dense prediction
+Implemented masking for self-supervised learning
+Designed modular pipeline for ablations
+⚠️ 2. Key Problems Encountered (and Fixes)
+🔻 1. Graph construction from real VLSI data
+Problem
+Precomputed graph data was incomplete or incorrect
+Needed accurate cell–net connectivity
+Fix
+Built custom pipeline from:
+DEF (placement)
+Verilog netlist (connectivity)
+Achieved correct extraction (~50k cells, ~50k nets)
+🔻 2. Invalid graph edges → CUDA crashes
+Problem
+
+Out-of-bounds indices caused:
+
+CUDA index out of bounds
+Fix
+Added sanitize_edge_index()
+
+Filtered:
+
+0 ≤ index < num_nodes
+Ensured valid edge tensors before training
+🔻 3. Graph size explosion (major bottleneck)
+Problem
+Clique-based cell–cell edges → ~20M edges
+Training became extremely slow / infeasible
+Fix
+Switched to star expansion
+Reduced edges to ~300k
+Enabled practical training
+🔻 4. Training too slow (major bottleneck)
+Problem
+~60k cells per sample → ~11 sec per batch
+Fix
+
+Introduced graph cap:
+
+max_cells = 8000
+Remapped graph + edges accordingly
+
+👉 Result:
+
+~11 sec → ~2 sec per batch
+🔻 5. Graph vs geometry mismatch
+Problem
+graph cells ≠ geometry cells
+batching produced incorrect offsets
+Fix
+used graph_n_cells instead of geometry count
+corrected batching logic
+🔻 6. Model failed to learn meaningful signal
+Problem
+training loss decreased but validation correlation was poor or negative
+Root causes
+sigmoid activation compressing outputs
+label values too small
+weak supervision (RUDY labels)
+Fixes
+removed sigmoid (activation=None)
+switched to congestion labels
+improved output–target alignment
+🔻 7. Masking initially hurt performance
+Problem
+masking degraded performance on small datasets
+Cause
+insufficient data → information loss dominates
+Fix
+disabled masking initially
+re-enabled after increasing dataset size
+🧠 Final Insight
+
+Your pipeline evolved from:
+
+grid-only CNN
+→ incorrect graph
+→ raw graph reconstruction
+→ stable GNN pipeline
+→ optimized hybrid model
+
+You now have:
+
+✔ Correct graph construction
+✔ Stable heterogeneous GNN
+✔ Efficient training (graph cap)
+✔ Proper target labels
+✔ Strong validation performance
+
+🚀 Final Summary
+Implementation
+Graph-based representation of circuits
+Heterogeneous GNN for connectivity
+Spatial encoder for layout
+Fusion for combined reasoning
+CNN decoder for prediction
+Key challenges solved
+building graphs from real VLSI data
+fixing invalid edge indices
+controlling graph size for scalability
+aligning graph + spatial representations
+correcting output distribution and supervision
