@@ -84,9 +84,10 @@ class MInterfaceDeeplayout(pl.LightningModule):
         if not torch.isfinite(loss):
             raise RuntimeError(f"Non-finite loss detected: {loss}")
     
-        self.log("loss", loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=self.hparams.batch_size)
-        self.log("loss_main", main_loss, on_step=True, on_epoch=True, prog_bar=False, batch_size=self.hparams.batch_size)
-        self.log("loss_coord", coord_loss, on_step=True, on_epoch=True, prog_bar=False, batch_size=self.hparams.batch_size)
+        bs = label.shape[0]
+        self.log("loss", loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=bs)
+        self.log("loss_main", main_loss, on_step=True, on_epoch=True, prog_bar=False, batch_size=bs)
+        self.log("loss_coord", coord_loss, on_step=True, on_epoch=True, prog_bar=False, batch_size=bs)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -104,6 +105,8 @@ class MInterfaceDeeplayout(pl.LightningModule):
         output_var = output.var(unbiased=False)
         label_mean = label.mean()
         label_var = label.var(unbiased=False)
+        output_std = torch.sqrt(output_var + 1e-8)
+        label_std = torch.sqrt(label_var + 1e-8)
     
         self.log("val/output_mean", output_mean, on_step=False, on_epoch=True,
                  batch_size=label.shape[0], sync_dist=True)
@@ -112,6 +115,10 @@ class MInterfaceDeeplayout(pl.LightningModule):
         self.log("val/label_mean", label_mean, on_step=False, on_epoch=True,
                  batch_size=label.shape[0], sync_dist=True)
         self.log("val/label_var", label_var, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("val/output_std", output_std, on_step=False, on_epoch=True, 
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("val/label_std", label_std, on_step=False, on_epoch=True, 
                  batch_size=label.shape[0], sync_dist=True)
     
         if batch_idx == 0:
@@ -139,6 +146,8 @@ class MInterfaceDeeplayout(pl.LightningModule):
         output_var = output.var(unbiased=False)
         label_mean = label.mean()
         label_var = label.var(unbiased=False)
+        output_std = torch.sqrt(output_var + 1e-8)
+        label_std = torch.sqrt(label_var + 1e-8)
     
         self.log("test/output_mean", output_mean, on_step=False, on_epoch=True,
                  batch_size=label.shape[0], sync_dist=True)
@@ -147,6 +156,10 @@ class MInterfaceDeeplayout(pl.LightningModule):
         self.log("test/label_mean", label_mean, on_step=False, on_epoch=True,
                  batch_size=label.shape[0], sync_dist=True)
         self.log("test/label_var", label_var, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("test/output_std", output_std, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("test/label_std", label_std, on_step=False, on_epoch=True,
                  batch_size=label.shape[0], sync_dist=True)
     
         if batch_idx == 0:
@@ -211,18 +224,18 @@ class MInterfaceDeeplayout(pl.LightningModule):
     def on_validation_epoch_end(self):
         pearson, spearman, kendall = self.metric.compute()
     
-        self.log("val/pearson", pearson, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size, sync_dist=True)
-        self.log("val/spearman", spearman, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size, sync_dist=True)
-        self.log("val/kendall", kendall, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size, sync_dist=True)
+        self.log("val/pearson", pearson, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("val/spearman", spearman, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("val/kendall", kendall, on_step=False, on_epoch=True, sync_dist=True)
     
         print("val pearson:", pearson, "spearman:", spearman, "kendall:", kendall)
         self.metric.reset()
 
     def on_test_epoch_end(self):
         pearson, spearman, kendall = self.metric.compute()
-        self.log("test/pearson", pearson, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size, sync_dist=True)
-        self.log("test/spearman", spearman, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size, sync_dist=True)
-        self.log("test/kendall", kendall, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size, sync_dist=True)
+        self.log("test/pearson", pearson, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("test/spearman", spearman, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("test/kendall", kendall, on_step=False, on_epoch=True, sync_dist=True)
         print("pearson:", pearson, "spearman:", spearman, "kendall:", kendall)
         self.metric.reset()
         self.logged_test_visualizations = 0
