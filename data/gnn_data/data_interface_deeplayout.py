@@ -87,7 +87,7 @@ class DInterfaceDeeplayout(pl.LightningDataModule):
             self.testset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            shuffle=True,
+            shuffle=False,
             collate_fn=collate_graph_batch,
             pin_memory=True,
             persistent_workers=self.num_workers > 0,

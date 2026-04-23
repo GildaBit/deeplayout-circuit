@@ -94,8 +94,8 @@ class GraphEncoderDeepLayout(nn.Module):
         self,
         cell_in_dim: int = 9,
         net_in_dim: int = 3,
-        hidden_dim: int = 64,
-        out_dim: int = 64,
+        hidden_dim: int = 32,
+        out_dim: int = 32,
         num_layers: int = 2,
         dropout: float = 0.0,
     ):

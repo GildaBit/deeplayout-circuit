@@ -77,15 +77,7 @@ class MInterfaceDeeplayout(pl.LightningModule):
             print("output min/max/mean:", output.min().item(), output.max().item(), output.mean().item())
             print("label min/max/mean:", label.min().item(), label.max().item(), label.mean().item())
     
-        if output.shape[-2:] != label.shape[-2:]:
-            output = torch.nn.functional.interpolate(
-                output,
-                size=label.shape[-2:],
-                mode="bilinear",
-                align_corners=False,
-            )
-    
-        main_loss = self.hparams.loss_weight * torch.mean(((output - label) ** 2) * weight)
+        output, main_loss = self.compute_main_loss(output, label, weight)
         coord_loss = self.compute_coord_mask_loss(aux)
         loss = main_loss + self.hparams.coord_loss_weight * coord_loss
     
@@ -100,14 +92,27 @@ class MInterfaceDeeplayout(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         output, aux = self(batch)
         label = batch["label"]
+        weight = batch["weight"]
     
-        if output.shape[-2:] != label.shape[-2:]:
-            output = torch.nn.functional.interpolate(
-                output,
-                size=label.shape[-2:],
-                mode="bilinear",
-                align_corners=False,
-            )
+        output, main_loss = self.compute_main_loss(output, label, weight)
+    
+        self.log("val/loss_main", main_loss, on_step=False, on_epoch=True,
+                 prog_bar=True, batch_size=label.shape[0], sync_dist=True)
+    
+        # output/label summary stats
+        output_mean = output.mean()
+        output_var = output.var(unbiased=False)
+        label_mean = label.mean()
+        label_var = label.var(unbiased=False)
+    
+        self.log("val/output_mean", output_mean, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("val/output_var", output_var, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("val/label_mean", label_mean, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("val/label_var", label_var, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
     
         if batch_idx == 0:
             print("label min/max:", label.min().item(), label.max().item())
@@ -123,24 +128,35 @@ class MInterfaceDeeplayout(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         output, aux = self(batch)
         label = batch["label"]
-
-        if output.shape[-2:] != label.shape[-2:]:
-            output = torch.nn.functional.interpolate(
-                output,
-                size=label.shape[-2:],
-                mode="bilinear",
-                align_corners=False,
-            )
-
+        weight = batch["weight"]
+    
+        output, main_loss = self.compute_main_loss(output, label, weight)
+    
+        self.log("test/loss_main", main_loss, on_step=False, on_epoch=True,
+                 prog_bar=True, batch_size=label.shape[0], sync_dist=True)
+    
+        output_mean = output.mean()
+        output_var = output.var(unbiased=False)
+        label_mean = label.mean()
+        label_var = label.var(unbiased=False)
+    
+        self.log("test/output_mean", output_mean, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("test/output_var", output_var, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("test/label_mean", label_mean, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+        self.log("test/label_var", label_var, on_step=False, on_epoch=True,
+                 batch_size=label.shape[0], sync_dist=True)
+    
         if batch_idx == 0:
             print("label min/max:", label.min().item(), label.max().item())
             print("output min/max:", output.min().item(), output.max().item())
             print("label_weight:", self.hparams.label_weight)
-        
+    
         for i in range(output.shape[0]):
             output_ = output[i].squeeze()
             label_ = label[i].squeeze()
-        
             self.metric.update(label_.detach().cpu(), output_.detach().cpu())
 
         try:
@@ -244,6 +260,20 @@ class MInterfaceDeeplayout(pl.LightningModule):
 
     def lr_scheduler_step(self, scheduler, metric=None):
         scheduler.step(epoch=self.current_epoch + 1)
+
+    def compute_main_loss(self, output, label, weight):
+        if output.shape[-2:] != label.shape[-2:]:
+            output = torch.nn.functional.interpolate(
+                output,
+                size=label.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            )
+    
+        l1 = torch.abs(output - label)
+        l2 = (output - label) ** 2
+        main_loss = self.hparams.loss_weight * torch.mean((0.5 * l1 + 0.5 * l2) * weight)
+        return output, main_loss
 
     def configure_loss(self):
         loss = self.hparams.loss
