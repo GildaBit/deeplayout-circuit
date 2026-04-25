@@ -77,15 +77,15 @@ class CircuitnetDeeplayout(Dataset):
         
         if split['split'] == 'train':
             self.is_train = True
-            with open(os.path.join(data_dir, "train_debug2500.txt"), "r") as f:
+            with open(os.path.join(data_dir, "train.txt"), "r") as f:
                 self.data_list = [line.strip() for line in f if line.strip()]
         elif split['split'] == 'val':
             self.is_train = False
-            with open(os.path.join(data_dir, "val_debug250.txt"), "r") as f:
+            with open(os.path.join(data_dir, "val.txt"), "r") as f:
                 self.data_list = [line.strip() for line in f if line.strip()]
         elif split['split'] == 'test':
             self.is_train = False
-            with open(os.path.join(data_dir, "test_debug.txt"), "r") as f:
+            with open(os.path.join(data_dir, "test.txt"), "r") as f:
                 self.data_list = [line.strip() for line in f if line.strip()]
         else:
             raise ValueError(f"Unknown split: {split}")
@@ -306,14 +306,14 @@ class CircuitnetDeeplayout(Dataset):
         net_to_cell_edge_index = sanitize_edge_index(net_to_cell_edge_index, num_nets, num_cells)
         cell_to_cell_edge_index = sanitize_edge_index(cell_to_cell_edge_index, num_cells, num_cells)
 
-        cell_feat, net_feat, cell_to_net_edge_index, net_to_cell_edge_index, cell_to_cell_edge_index = self.cap_graph_size(
-            cell_feat,
-            net_feat,
-            cell_to_net_edge_index,
-            net_to_cell_edge_index,
-            cell_to_cell_edge_index,
-            max_cells=8000,
-        )
+#        cell_feat, net_feat, cell_to_net_edge_index, net_to_cell_edge_index, cell_to_cell_edge_index = self.cap_graph_size(
+#            cell_feat,
+#            net_feat,
+#            cell_to_net_edge_index,
+#            net_to_cell_edge_index,
+#            cell_to_cell_edge_index,
+#            max_cells=12000,
+#        )
 
         num_cells = cell_feat.shape[0]
         num_nets = net_feat.shape[0]
@@ -380,8 +380,9 @@ class CircuitnetDeeplayout(Dataset):
     
     
     def _get_graph_path(self, rel_path):
-        graph_key = self._sample_to_graph_key(rel_path)
-        graph_path = os.path.join(self.graph_root, graph_key + ".graph.npz")
+        base = os.path.basename(rel_path)
+        stem, _ = os.path.splitext(base)
+        graph_path = os.path.join(self.graph_root, stem + ".graph.npz")
     
         if not os.path.exists(graph_path):
             raise FileNotFoundError(

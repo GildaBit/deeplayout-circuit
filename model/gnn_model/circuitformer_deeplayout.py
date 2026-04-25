@@ -82,7 +82,7 @@ class HybridEncoderDeepLayout(nn.Module):
 
         self.graph_encoder = GraphEncoderDeepLayout(
             cell_in_dim=9,
-            net_in_dim=3,
+            net_in_dim=5,
             hidden_dim=graph_hidden_dim,
             out_dim=graph_out_dim,
             num_layers=2,
@@ -200,8 +200,8 @@ class CircuitFormerDeepLayout(nn.Module):
 
         self.encoder = HybridEncoderDeepLayout(
             grid_size=256,
-            graph_hidden_dim=64,
-            graph_out_dim=64,
+            graph_hidden_dim=32,
+            graph_out_dim=32,
             mask_ratio=0.5,
             mask_bin_size=16,
             enable_masking=True,
@@ -211,7 +211,7 @@ class CircuitFormerDeepLayout(nn.Module):
             encoder_name="resnet18",
             encoder_depth=5,
             decoder_use_batchnorm=True,
-            decoder_channels=(512, 256, 128, 64, 64),
+            decoder_channels=(512, 256, 128, 64, 32),
             decoder_attention_type=None,
             in_channels=64,
             classes=1,
